@@ -7,7 +7,7 @@
 
 # USER SPECIFIC PARAMETERS
 base_pos = "./"            # Folders will be created here. If you want to make a parent folder, change this to ex "./adventofcode/"
-USER_SESSION_ID = ""       # Get your session by inspecting the session cookie content in your web browser while connected to adventofcode and paste it here as plain text in between the ". Leave at is to not download inputs.
+USER_SESSION_ID = "53616c7465645f5f13f4ea12013fa1d5f61d4eea12f488c490082d58ccec577cb4e86b1fcdbe404dfa2fe8b874068995"       # Get your session by inspecting the session cookie content in your web browser while connected to adventofcode and paste it here as plain text in between the ". Leave at is to not download inputs.
 DOWNLOAD_STATEMENTS = True # Set to false to not download statements. Note that only part one is downloaded (since you need to complete it to access part two)
 DOWNLOAD_INPUTS = True     # Set to false to not download inputs. Note that if the USER_SESSION_ID is wrong or left empty, inputs will not be downloaded.
 MAKE_CODE_TEMPLATE = True  # Set to false to not make code templates. Note that even if OVERWRITE is set to True, it will never overwrite codes.
@@ -19,7 +19,7 @@ OVERWRITE = False          # If you really need to download the whole thing agai
 date = "December 2019"              # Date automatically put in the code templates.
 starting_advent_of_code_year = 2019 # You can go as early as 2015.
 last_advent_of_code_year = 2019     # The setup will download all advent of code data up until that date included
-last_advent_of_code_day = 1         # If the year isn't finished, the setup will download days up until that day included for the last year
+last_advent_of_code_day = 2         # If the year isn't finished, the setup will download days up until that day included for the last year
 # Imports
 import os
 import datetime
