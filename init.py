@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Advent of code working directories creator
 # IMPORTANT Remember to edit the USER_SESSION_ID & author values with yours
 # uses requests module. If not present use pip install requests
