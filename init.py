@@ -23,6 +23,7 @@ last_advent_of_code_day = 6         # If the year isn't finished, the setup will
 # Imports
 import os
 import datetime
+import argparse
 try:
     import requests
 except ImportError:
@@ -34,6 +35,13 @@ years = range(starting_advent_of_code_year, last_advent_of_code_year+1)
 days = range(1,26)
 link = "https://adventofcode.com/" # ex use : https://adventofcode.com/2017/day/19/input
 USER_AGENT = "adventofcode_working_directories_creator"
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--day', default=None, help="Up to which day to download", type=int)
+args = parser.parse_args()
+
+if not args.day is None:
+    last_advent_of_code_day = args.day
 
 print("Setup will download data and create working directories and files for adventofcode.")
 if not os.path.exists(base_pos):
