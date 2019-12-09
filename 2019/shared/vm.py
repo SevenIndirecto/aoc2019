@@ -19,49 +19,78 @@ class Param(object):
 
     def __init__(self, value, mode=0):
         self.value = value
+        self.is_positional = mode == 0
         self.is_immediate = mode == 1
-        self.is_positional = not self.is_immediate
+        self.is_relative = mode == 2
 
     def __repr__(self):
-        return '[{0}, {1}]'.format(self.value, 'POS' if self.is_positional else 'IMM')
+        return '[{0}, {1}]'.format(self.value, 'POS' if self.is_positional else 'IMM' if self.is_immediate else 'REL')
+
+
+class Memory(list):
+
+    def __init__(self, initial: list):
+        self.memory = initial
+        self.memory_ext = {}
+
+    def set(self, addr: int, value: int):
+        if addr < 0:
+            raise IndexError('Cannot set, negative address {0}'.format(addr))
+
+        if addr < len(self.memory):
+            self.memory[addr] = value
+            return
+
+        self.memory_ext[addr] = value
+
+    def get(self, addr: int):
+        if addr < 0:
+            raise IndexError('Negative address {0}'.format(addr))
+
+        if addr < len(self.memory):
+            return self.memory[addr]
+
+        return self.memory_ext.get(addr, 0)
 
 
 class VM(object):
 
     def __init__(self, program: str, input: IO, output: IO):
-        self.memory = [int(s) for s in program.split(',')]
+        self.memory = Memory(initial=[int(s) for s in program.split(',')])
         self.ip = 0
         self.is_halt = False
         self.input = input
         self.output = output
         self.OPMAP = {
-            '1': (self.add, 3),
-            '2': (self.mul, 3),
-            '3': (self.load_from_input, 1),
-            '4': (self.store_to_output, 1),
-            '5': (self.jump_if_true, 2),
-            '6': (self.jump_if_false, 2),
-            '7': (self.less_than, 3),
-            '8': (self.equals, 3),
-            '99': (self.halt, 0),
+            '1': (self.add, 3, 'ADD'),
+            '2': (self.mul, 3, 'MUL'),
+            '3': (self.load_from_input, 1, 'IN'),
+            '4': (self.store_to_output, 1, 'OUT'),
+            '5': (self.jump_if_true, 2, 'JMT'),
+            '6': (self.jump_if_false, 2, 'JMF'),
+            '7': (self.less_than, 3, '<'),
+            '8': (self.equals, 3, '=='),
+            '9': (self.adjust_relative_base_offset, 1, 'RBO'),
+            '99': (self.halt, 0, 'HALT'),
         }
         self.history = []
         self.ip_was_modified = False
         self.is_suspended = False
+        self.relative_base = 0
 
     # OPCODES
     def add(self, a: Param, b: Param, out: Param):
         a_val = self.get_param_value(a)
         b_val = self.get_param_value(b)
-        self.memory[out.value] = a_val + b_val
+        self.memory.set(self.get_param_pointer(out), a_val + b_val)
 
     def mul(self, a: Param, b: Param, out: Param):
         a_val = self.get_param_value(a)
         b_val = self.get_param_value(b)
-        self.memory[out.value] = a_val * b_val
+        self.memory.set(self.get_param_pointer(out), a_val * b_val)
 
     def load_from_input(self, a: Param):
-        self.memory[a.value] = self.input.value
+        self.memory.set(self.get_param_pointer(a), self.input.value)
 
     def store_to_output(self, a: Param):
         self.output.value = self.get_param_value(a)
@@ -83,19 +112,39 @@ class VM(object):
 
     def less_than(self, a: Param, b: Param, pos: Param):
         is_less = 1 if self.get_param_value(a) < self.get_param_value(b) else 0
-        self.memory[pos.value] = is_less
+        self.memory.set(self.get_param_pointer(pos), is_less)
 
     def equals(self, a: Param, b: Param, pos: Param):
         is_eq = 1 if self.get_param_value(a) == self.get_param_value(b) else 0
-        self.memory[pos.value] = is_eq
+        self.memory.set(self.get_param_pointer(pos), is_eq)
+
+    def adjust_relative_base_offset(self, a: Param):
+        self.relative_base += self.get_param_value(a)
 
     # END OPCODES
     def get_param_value(self, p: Param):
-        p_val = p.value if p.is_immediate else self.memory[p.value]
-        return p_val
+        if p.is_immediate:
+            return p.value
+
+        if p.is_positional:
+            return self.memory.get(p.value)
+
+        if p.is_relative:
+            return self.memory.get(self.relative_base + p.value)
+
+        raise RuntimeError('Invalid param mode {0}'.format(p))
+
+    def get_param_pointer(self, p: Param):
+        if p.is_immediate or p.is_positional:
+            return p.value
+        return self.relative_base + p.value
 
     def execute(self, op, args):
-        self.history.append((op, ','.join([str(a) for a in args])))
+        log = ((self.ip, self.OPMAP[op][2], ','.join(
+            ['{}(val: {})'.format(a, self.get_param_value(a)) for a in args]
+        ), 'rb: {}'.format(self.relative_base)))
+        # print(log)
+        self.history.append(log)
         self.OPMAP[op][0](*args)
 
     def print_stack_trace(self):
@@ -112,7 +161,7 @@ class VM(object):
         self.run()
 
     def proc_instruction(self):
-        op_call = str(self.memory[self.ip])
+        op_call = str(self.memory.get(self.ip))
 
         if len(op_call) < 3:
             op = op_call
@@ -133,9 +182,10 @@ class VM(object):
 
         args = []
         offset = 0
+
         for mode in modes:
             offset += 1
-            args.append(Param(value=self.memory[self.ip + offset], mode=mode))
+            args.append(Param(value=self.memory.get(self.ip + offset), mode=mode))
 
         # execute
         self.execute(op, args)
@@ -147,6 +197,4 @@ class VM(object):
 
     def run(self):
         while not self.is_halt and not self.is_suspended:
-            if len(self.memory) <= self.ip:
-                raise RuntimeError('Unexpected end of intmemory')
             self.proc_instruction()
