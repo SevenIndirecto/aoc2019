@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Advent of code Year 2019 Day 3 solution
 # Author = seven
 # Date = December 2019
